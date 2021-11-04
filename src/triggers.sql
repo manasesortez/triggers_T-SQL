@@ -35,11 +35,11 @@ SELECT * FROM cuenta;
 
 INSERT INTO cuenta(cuenta_id, cuenta_saldo, cliente_id)
 VALUES
-('7896578054', 200.67, 1),
-('8245678523', 1000.45, 2),
-('0978965643', 1234.90, 3),
+('7896578054', 1200.67, 1),
+('8245678523', 17000.45, 2),
+('0978965643', 19234.90, 3),
 ('5090876789', 1000.00, 4),
-('6745098967', 200.65, 5);
+('6745098967', 2800.65, 5);
 
 CREATE TABLE lineaCredito(
   lineaCredito_id INT UNIQUE NOT NULL IDENTITY(1000,3),
@@ -70,14 +70,6 @@ CREATE TABLE giro(
 
 SELECT * FROM giro;
 
-INSERT INTO giro(giro_fecha, giro_monto, cuenta_id)
-VALUES
-(GETDATE(), 100.00, '7896578054'),
-(GETDATE(), 125.25, '8245678523'),
-(GETDATE(), 200.00, '0978965643'),
-(GETDATE(), 205.00, '5090876789'),
-(GETDATE(), 30.00, '6745098967');
-
 CREATE TABLE usolineaCredito(
     usolineaCredito_id INT UNIQUE NOT NULL IDENTITY(1,1),
     usolineaCredito_fecha DATETIME NOT NULL,
@@ -88,14 +80,6 @@ CREATE TABLE usolineaCredito(
 );
 
 SELECT * FROM usolineaCredito;
-
-INSERT INTO usolineaCredito(usolineaCredito_fecha, usolineaCredito_monto, lineaCredito_id)
-VALUES
-(GETDATE(),500.00, 1000),
-(GETDATE(),345.90, 1003),
-(GETDATE(),200.90, 1006),
-(GETDATE(),100.00, 1009),
-(GETDATE(),123.00, 1012);
 
 /** CREAREMOS UN VIEW PARA VER LA INFO DE LA CUENTA PRINCIPAL*/
 CREATE VIEW view_info_account
@@ -117,11 +101,45 @@ WHERE
 deleted.cliente_id=cuenta.cliente_id
 End
 
+/**
+  TAREA
+ */
+
+CREATE OR ALTER TRIGGER triggers_transaction_giro
+ON giro AFTER INSERT, UPDATE
+AS
+DECLARE @giro_monto DECIMAL(10,2)
+DECLARE @cuenta_saldo DECIMAL(10,2)
+DECLARE @cuenta_id VARCHAR(10)
+
+SET @giro_monto = (SELECT giro_monto FROM inserted);
+SET @cuenta_id = (SELECT cuenta_id FROM inserted);
+SET @cuenta_saldo = (SELECT cuenta_saldo FROM cuenta WHERE cuenta_id = @cuenta_id);
+IF @giro_monto <= @cuenta_saldo
+BEGIN
+    UPDATE cuenta SET cuenta_saldo = cuenta_saldo - @giro_monto
+    WHERE cuenta_id = @cuenta_id
+END
+ELSE
+BEGIN
+    RAISERROR('El saldo disponible es insuficienta para completar la transaccion', 16, 10)
+    ROLLBACK;
+END
 
 
+SELECT * FROM cuenta;
+SELECT * FROM giro;
 
+/**TEST TRIGGERS */
+INSERT INTO giro(giro_fecha, giro_monto, cuenta_id)
+VALUES
+(GETDATE(), 52.40, '8245678523');
 
+INSERT INTO usolineaCredito(usolineaCredito_fecha, usolineaCredito_monto, lineaCredito_id)
+VALUES
+(GETDATE(),500.00, 1000);
 
-
+SELECT * FROM usolineaCredito;
+SELECT * FROM lineaCredito;
 
 
