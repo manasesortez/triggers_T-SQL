@@ -126,20 +126,35 @@ BEGIN
     ROLLBACK;
 END
 
-
-SELECT * FROM cuenta;
-SELECT * FROM giro;
-
 /**TEST TRIGGERS */
 INSERT INTO giro(giro_fecha, giro_monto, cuenta_id)
 VALUES
-(GETDATE(), 52.40, '8245678523');
+(GETDATE(), 105.40, '5090876789');
 
 INSERT INTO usolineaCredito(usolineaCredito_fecha, usolineaCredito_monto, lineaCredito_id)
 VALUES
-(GETDATE(),500.00, 1000);
+(GETDATE(),50.00, 1000);
 
-SELECT * FROM usolineaCredito;
-SELECT * FROM lineaCredito;
+CREATE OR ALTER TRIGGER triggers_transaction_credito
+ON usolineaCredito AFTER INSERT, UPDATE
+AS
+DECLARE @usolineaCredito_monto DECIMAL(10,2)
+DECLARE @lineaCredito_saldo DECIMAL(10,2)
+DECLARE @lineaCredito_id VARCHAR(10)
+
+SET @usolineaCredito_monto = (SELECT usolineaCredito_monto FROM inserted);
+SET @lineaCredito_id = (SELECT lineaCredito_id FROM inserted);
+SET @lineaCredito_saldo = (SELECT lineaCredito_saldo FROM lineaCredito WHERE lineaCredito.lineaCredito_id = @lineaCredito_id);
+IF @usolineaCredito_monto <= @lineaCredito_saldo
+BEGIN
+    UPDATE lineaCredito SET lineaCredito_saldo = lineaCredito_saldo - @usolineaCredito_monto
+    WHERE lineaCredito_id = @lineaCredito_id
+END
+ELSE
+BEGIN
+    RAISERROR('El credito disponible es insuficienta para completar la transaccion', 16, 10)
+    ROLLBACK;
+END
+
 
 
